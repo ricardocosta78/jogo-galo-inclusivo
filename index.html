@@ -800,6 +800,7 @@ document.addEventListener('keydown', e => {
     return;
   }
 
+  if (e.key === 'Enter' && over) { e.preventDefault(); newGame(); return; }
   if (e.target.matches('.cell')) return;
   if (e.key === 'r' || e.key === 'R') newGame();
   if (e.key === 'v' || e.key === 'V') toggleVoice();
