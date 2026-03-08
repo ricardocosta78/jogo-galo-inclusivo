@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo do Galo – Acessível (Voz Microsoft Neural)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg:      #07070f;
+    --surface: #0e0e1c;
+    --card:    #14142a;
+    --accent:  #4fc3f7;
+    --accent2: #f06292;
+    --x-col:   #4fc3f7;
+    --o-col:   #f48fb1;
+    --text:    #e8eaf6;
+    --muted:   #7986cb;
+    --border:  #252545;
+    --focus:   #ffeb3b;
+    --win:     #69f0ae;
+    --glow-x:  rgba(79,195,247,0.35);
+    --glow-o:  rgba(244,143,177,0.35);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Atkinson Hyperlegible', Georgia, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 1.5rem 1rem 3rem;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(79,195,247,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(244,143,177,0.06) 0%, transparent 70%);
+  }
+
+  /* ── Skip link ──────────────────────── */
+  .skip-link {
+    position: absolute; top: -50px; left: 1rem;
+    background: var(--focus); color: #000;
+    padding: 10px 18px; border-radius: 6px;
+    font-weight: 700; font-size: 1rem;
+    z-index: 200; transition: top .2s;
+    text-decoration: none;
+  }
+  .skip-link:focus { top: 1rem; }
+
+  /* ── SR-only (leitores de ecrã) ───── */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* ── Container ──────────────────────── */
+  .wrap {
+    width: 100%; max-width: 520px;
+    animation: fadeUp .5s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Cabeçalho ──────────────────────── */
+  header { text-align: center; margin-bottom: 1.8rem; }
+
+  h1 {
+    font-family: 'Space Mono', 'Courier New', monospace;
+    font-size: clamp(1.7rem, 5vw, 2.6rem);
+    letter-spacing: .06em;
+    color: var(--accent);
+    text-shadow: 0 0 35px var(--glow-x);
+    margin-bottom: .35rem;
+  }
+
+  .subtitle {
+    color: var(--muted); font-size: .85rem;
+    letter-spacing: .12em; text-transform: uppercase;
+  }
+
+  /* ── Painel de estado ───────────────── */
+  #status-panel {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 1.4rem;
+    margin-bottom: 1.4rem;
+    text-align: center;
+    min-height: 72px;
+    display: flex; align-items: center;
+    justify-content: center; flex-direction: column; gap: .25rem;
+    transition: border-color .3s;
+  }
+
+  #status-msg {
+    font-size: 1.1rem; font-weight: 700; color: var(--text);
+    transition: color .3s;
+  }
+  #turn-sub { font-size: .82rem; color: var(--muted); min-height: 1.2em; }
+
+  .c-x   { color: var(--x-col) !important; }
+  .c-o   { color: var(--o-col) !important; }
+  .c-win { color: var(--win)   !important; font-size: 1.25rem !important; }
+
+  /* ── Modo de jogo ───────────────────── */
+  .mode-row {
+    display: flex; gap: .6rem; justify-content: center;
+    margin-bottom: 1.2rem; flex-wrap: wrap;
+  }
+
+  /* ── Placar ─────────────────────────── */
+  .scoreboard {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    gap: .5rem; margin-bottom: 1.3rem; align-items: center;
+  }
+
+  .sc {
+    background: var(--card); border: 2px solid var(--border);
+    border-radius: 12px; padding: .7rem .5rem;
+    text-align: center; transition: border-color .3s;
+  }
+  .sc.turn { border-color: var(--focus); }
+  .sc-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .sc-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem; font-weight: 700;
+    line-height: 1.1;
+  }
+  .sc.x .sc-val { color: var(--x-col); text-shadow: 0 0 12px var(--glow-x); }
+  .sc.o .sc-val { color: var(--o-col); text-shadow: 0 0 12px var(--glow-o); }
+  .sc-vs { font-family: 'Space Mono', monospace; color: var(--muted); font-size: .75rem; }
+
+  /* ── Tabuleiro ──────────────────────── */
+  #board {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 9px; margin-bottom: 1.4rem;
+  }
+
+  .cell {
+    aspect-ratio: 1;
+    background: var(--card);
+    border: 3px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2.2rem, 9vw, 3.8rem);
+    font-weight: 700;
+    min-height: 95px;
+    outline: none;
+    transition: background .15s, border-color .15s, transform .1s, box-shadow .15s;
+    -webkit-user-select: none; user-select: none;
+  }
+
+  .cell:focus {
+    border-color: var(--focus);
+    box-shadow: 0 0 0 4px rgba(255,235,59,.28), inset 0 0 18px rgba(255,235,59,.06);
+    z-index: 2;
+  }
+
+  .cell:hover:not([disabled]):not(.taken) {
+    background: #1a1a34;
+    border-color: var(--muted);
+    transform: scale(1.04);
+  }
+
+  .cell.x {
+    color: var(--x-col);
+    text-shadow: 0 0 22px var(--glow-x);
+    border-color: rgba(79,195,247,.35);
+  }
+  .cell.o {
+    color: var(--o-col);
+    text-shadow: 0 0 22px var(--glow-o);
+    border-color: rgba(244,143,177,.35);
+  }
+  .cell.taken { cursor: default; }
+
+  .cell.winner {
+    background: rgba(105,240,174,.09);
+    border-color: var(--win);
+    animation: pulseWin .85s ease infinite alternate;
+  }
+  @keyframes pulseWin {
+    from { box-shadow: 0 0 8px rgba(105,240,174,.3); }
+    to   { box-shadow: 0 0 28px rgba(105,240,174,.75); }
+  }
+
+  /* Etiqueta de posição visual */
+  .cell-pos {
+    position: absolute; top: 5px; left: 8px;
+    font-size: .58rem; color: var(--muted);
+    opacity: .55; pointer-events: none;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Dica de tecla numérica */
+  .cell-num {
+    position: absolute; bottom: 5px; right: 8px;
+    font-size: .72rem; font-weight: 700;
+    color: var(--accent); opacity: .45;
+    pointer-events: none;
+    font-family: 'Space Mono', monospace;
+    transition: opacity .2s;
+  }
+  .cell:hover .cell-num,
+  .cell:focus .cell-num { opacity: .9; }
+
+  /* Tabuleiro bloqueado enquanto a voz fala */
+  #board.speaking { opacity: .55; pointer-events: none; cursor: wait; }
+  .cell.taken .cell-num { display: none; }
+
+  /* Modo de jogo – secção */
+  .mode-label {
+    text-align: center; font-size: .75rem;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: .1em; margin-bottom: .5rem;
+  }
+  .mode-btn {
+    flex: 1; padding: .65rem .8rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-size: .92rem; font-weight: 700;
+    cursor: pointer; transition: all .2s;
+    display: flex; flex-direction: column;
+    align-items: center; gap: .15rem;
+  }
+  .mode-btn small {
+    font-size: .68rem; font-weight: 400; color: var(--muted); opacity: .8;
+  }
+  .mode-btn:focus { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .mode-btn.active {
+    background: rgba(79,195,247,.14);
+    border-color: var(--accent); color: var(--accent);
+  }
+  .mode-btn.active small { color: var(--accent); opacity: .7; }
+
+  /* Entrada da peça */
+  @keyframes popIn {
+    0%   { transform: scale(.45); opacity: 0; }
+    70%  { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .cell.pop { animation: popIn .22s ease both; }
+
+  /* ── Botões de ação ─────────────────── */
+  .btn-row { display: flex; gap: .7rem; flex-wrap: wrap; margin-bottom: .6rem; }
+
+  .btn {
+    flex: 1; min-width: 110px;
+    padding: .72rem .9rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-size: .92rem; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+    transition: all .15s;
+  }
+  .btn:focus { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .btn:hover, .btn:focus {
+    background: var(--card); border-color: var(--accent); color: var(--accent);
+  }
+  .btn-primary {
+    background: rgba(79,195,247,.1);
+    border-color: var(--accent); color: var(--accent);
+  }
+  .btn-primary:hover, .btn-primary:focus { background: rgba(79,195,247,.2); }
+
+  /* Badge estado da voz */
+  #voice-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: .7rem;
+    font-family: 'Space Mono', monospace;
+    background: rgba(105,240,174,.15);
+    color: var(--win);
+    border: 1px solid rgba(105,240,174,.3);
+    margin-left: 4px;
+  }
+  #voice-badge.off {
+    background: rgba(255,100,100,.12);
+    color: #ef9a9a;
+    border-color: rgba(255,100,100,.25);
+  }
+
+  /* ── Indicador de voz ativa ─────────── */
+  #speaking-indicator {
+    display: none;
+    align-items: center; gap: .4rem;
+    justify-content: center;
+    font-size: .78rem; color: var(--muted);
+    margin-bottom: .5rem;
+  }
+  #speaking-indicator.active { display: flex; }
+  .dot-pulse {
+    display: flex; gap: 3px; align-items: center;
+  }
+  .dot-pulse span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: dotPulse 1.2s ease-in-out infinite;
+  }
+  .dot-pulse span:nth-child(2) { animation-delay: .2s; }
+  .dot-pulse span:nth-child(3) { animation-delay: .4s; }
+  @keyframes dotPulse {
+    0%,80%,100% { opacity: .3; transform: scaleY(.7); }
+    40%         { opacity: 1;  transform: scaleY(1.4); }
+  }
+
+  /* ── Ajuda / Atalhos ────────────────── */
+  details {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; margin-top: 1rem; overflow: hidden;
+  }
+  summary {
+    padding: .7rem 1rem; cursor: pointer;
+    font-size: .84rem; color: var(--muted);
+    list-style: none;
+    display: flex; align-items: center; gap: .4rem;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary:focus { outline: 3px solid var(--focus); }
+  .help-body {
+    padding: .7rem 1rem 1rem;
+    font-size: .83rem; line-height: 1.75;
+    color: var(--muted); border-top: 1px solid var(--border);
+  }
+  .help-body kbd {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 7px;
+    font-family: 'Space Mono', monospace; font-size: .78rem; color: var(--text);
+  }
+  .help-body strong { color: var(--text); }
+
+  /* ── Região live (sr) ───────────────── */
+  #live-assertive, #live-polite {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- Região ARIA live para leitores de ecrã -->
+<div id="live-assertive" aria-live="assertive" aria-atomic="true"></div>
+<div id="live-polite"    aria-live="polite"    aria-atomic="true"></div>
+
+<a href="#board" class="skip-link">Saltar para o tabuleiro</a>
+
+<div class="wrap">
+
+  <header>
+    <h1>Jogo do Galo</h1>
+    <p class="subtitle">♿ Inclusivo · Voz Neural · Teclado</p>
+  </header>
+
+  <!-- Estado da partida -->
+  <section id="status-panel" aria-label="Estado do jogo" aria-live="polite">
+    <div id="status-msg">Pronto a jogar!</div>
+    <div id="turn-sub"></div>
+  </section>
+
+  <!-- Indicador de fala ativa -->
+  <div id="speaking-indicator" aria-hidden="true">
+    <div class="dot-pulse"><span></span><span></span><span></span></div>
+    <span id="speaking-text">A falar…</span>
+  </div>
+
+  <!-- Seleção modo -->
+  <p class="mode-label">Escolha o adversário</p>
+  <div class="mode-row" role="group" aria-label="Modo de jogo">
+    <button class="mode-btn active" id="btn-2p"  onclick="setMode('2p')"  aria-pressed="true">
+      👥 1 vs 1
+      <small>Dois jogadores</small>
+    </button>
+    <button class="mode-btn"        id="btn-cpu" onclick="setMode('cpu')" aria-pressed="false">
+      🤖 vs Computador
+      <small>CPU imbatível</small>
+    </button>
+  </div>
+
+  <!-- Placar -->
+  <div class="scoreboard" role="region" aria-label="Pontuação">
+    <div class="sc x" id="sc-x">
+      <div class="sc-label">Jogador X</div>
+      <div class="sc-val" id="val-x">0</div>
+    </div>
+    <div class="sc-vs">VS</div>
+    <div class="sc o" id="sc-o">
+      <div class="sc-label" id="label-o">Jogador O</div>
+      <div class="sc-val" id="val-o">0</div>
+    </div>
+  </div>
+
+  <!-- Tabuleiro -->
+  <div id="board" role="grid" aria-label="Tabuleiro Jogo do Galo, 3 linhas por 3 colunas">
+    <!-- células geradas por JS -->
+  </div>
+
+  <!-- Ações -->
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btn-new"   onclick="newGame()">🔄 Nova Partida</button>
+    <button class="btn"             id="btn-reset"  onclick="resetAll()">🗑️ Apagar Placar</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn" id="btn-voice" onclick="toggleVoice()">
+      🔊 Voz <span id="voice-badge">ON</span>
+    </button>
+    <button class="btn" id="btn-repeat" onclick="repeatStatus()">
+      🔁 Repetir
+    </button>
+  </div>
+
+  <!-- Instruções teclado -->
+  <details>
+    <summary>⌨️ Atalhos de Teclado e Instruções</summary>
+    <div class="help-body">
+      <strong>Teclado numérico (numpad) — jogar diretamente:</strong><br>
+      <kbd>7</kbd><kbd>8</kbd><kbd>9</kbd> — linha de cima<br>
+      <kbd>4</kbd><kbd>5</kbd><kbd>6</kbd> — linha do meio<br>
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> — linha de baixo<br>
+      (os números estão visíveis nas casas)<br><br>
+      <strong>Navegar com setas:</strong><br>
+      <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> — mover entre casas<br>
+      <kbd>Enter</kbd> ou <kbd>Espaço</kbd> — jogar na casa selecionada<br>
+      <kbd>Tab</kbd> — mover para o próximo botão<br>
+      <kbd>R</kbd> — nova partida &nbsp;|&nbsp; <kbd>V</kbd> — ligar/desligar voz<br>
+      <kbd>1</kbd> (fila numérica) — modo 2 jogadores<br>
+      <kbd>2</kbd> (fila numérica) — modo vs Computador<br><br>
+      <strong>Posições do tabuleiro:</strong><br>
+      Linha 1: canto superior esquerdo · centro superior · canto superior direito<br>
+      Linha 2: centro esquerdo · centro · centro direito<br>
+      Linha 3: canto inferior esquerdo · centro inferior · canto inferior direito<br><br>
+      <strong>Vozes:</strong> usa preferencialmente a voz Microsoft Raquel (PT-PT Neural).
+      Se não estiver disponível, usa a melhor voz portuguesa instalada.
+    </div>
+  </details>
+
+</div><!-- /.wrap -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  CONFIGURAÇÃO DE VOZ
+//  Modo 1 (melhor): servidor Python edge-tts em localhost:5050
+//  Modo 2 (fallback): Web Speech API com voz Microsoft Neural
+// ═══════════════════════════════════════════════════════════════════
+const TTS_SERVER = 'http://localhost:5050/api/tts';
+const EDGE_VOICE = 'pt-PT-RaquelNeural';   // voz padrão no servidor
+
+let serverAvailable = false;   // descoberto ao init
+let voiceEnabled    = true;
+let currentStatusText = '';
+
+// ── Deteta se o servidor Python está ativo ──
+async function probeServer() {
+  try {
+    const r = await fetch('http://localhost:5050/api/status', { signal: AbortSignal.timeout(800) });
+    if (r.ok) {
+      serverAvailable = true;
+      console.log('[TTS] Servidor edge-tts ativo ✓');
+      updateVoiceBadge();
+    }
+  } catch {
+    serverAvailable = false;
+    console.log('[TTS] Servidor não encontrado – a usar Web Speech API');
+  }
+}
+
+// ── Web Speech API (fallback) ────────────────────────────────────
+const synth = window.speechSynthesis;
+let chosenVoice = null;
+
+const VOICE_PREFS = [
+  'Microsoft Raquel Online (Natural) - Portuguese (Portugal)',
+  'Microsoft Fernanda Online (Natural) - Portuguese (Portugal)',
+  'Microsoft Helia Online (Natural) - Portuguese (Portugal)',
+  'Microsoft Raquel Desktop - Portuguese (Portugal)',
+  'Microsoft Helia Desktop - Portuguese (Portugal)',
+  null   // fallback: primeira pt-PT disponível
+];
+
+function loadVoice() {
+  const voices = synth.getVoices();
+  if (!voices.length) return;
+  for (const pref of VOICE_PREFS) {
+    if (pref === null) {
+      chosenVoice = voices.find(v => /^pt[\-_]pt/i.test(v.lang))
+                 || voices.find(v => /^pt/i.test(v.lang))
+                 || voices[0];
+      break;
+    }
+    const f = voices.find(v => v.name === pref);
+    if (f) { chosenVoice = f; break; }
+  }
+  console.log('[TTS] Voz Web Speech:', chosenVoice?.name, chosenVoice?.lang);
+}
+loadVoice();
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoice;
+
+// ── Fila de falas ────────────────────────────────────────────────
+let speakQueue = [];
+let speakBusy  = false;
+
+function speak(text, priority = false) {
+  // ARIA live (funciona com leitores de ecrã independentemente da voz)
+  const live = priority
+    ? document.getElementById('live-assertive')
+    : document.getElementById('live-polite');
+  live.textContent = '';
+  setTimeout(() => { live.textContent = text; }, 15);
+
+  if (!voiceEnabled) return;
+
+  if (priority) {
+    // Cancela tudo em curso
+    synth.cancel();
+    speakQueue.forEach(q => q.abort && q.abort());
+    speakQueue = [];
+    speakBusy  = false;
+    stopCurrentAudio();
+  }
+
+  speakQueue.push(text);
+  if (!speakBusy) processQueue();
+}
+
+// ── Reprodução: tenta servidor, senão Web Speech ──────────────────
+let currentAudio = null;
+
+function stopCurrentAudio() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = '';
+    currentAudio = null;
+  }
+}
+
+let pendingCpuMove = false;   // aguarda fim da fala antes de a CPU jogar
+
+async function processQueue() {
+  if (!speakQueue.length) {
+    speakBusy = false;
+    if (pendingCpuMove) {
+      pendingCpuMove = false;
+      // Mantém tabuleiro bloqueado e aguarda buffer de áudio esvaziar
+      setTimeout(cpuPlay, 900);
+    } else {
+      setSpeakingIndicator(false);
+    }
+    return;
+  }
+  speakBusy = true;
+  const text = speakQueue.shift();
+  setSpeakingIndicator(true, text);
+
+  if (serverAvailable) {
+    // ── Modo 1: edge-tts via servidor Python ──
+    try {
+      const res = await fetch(TTS_SERVER, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: EDGE_VOICE }),
+        signal: AbortSignal.timeout(6000)
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        currentAudio = new Audio(url);
+        currentAudio.onended = currentAudio.onerror = () => {
+          URL.revokeObjectURL(url);
+          currentAudio = null;
+          speakBusy = false;
+          processQueue();
+        };
+        currentAudio.play();
+        return;
+      }
+    } catch (e) {
+      console.warn('[TTS] Servidor falhou, a usar Web Speech:', e.message);
+      serverAvailable = false;
+      updateVoiceBadge();
+    }
+  }
+
+  // ── Modo 2: Web Speech API ──
+  const utt    = new SpeechSynthesisUtterance(text);
+  utt.lang     = 'pt-PT';
+  utt.rate     = 0.78;
+  utt.pitch    = 1.0;
+  utt.volume   = 1.0;
+  if (chosenVoice) utt.voice = chosenVoice;
+  utt.onend = utt.onerror = () => { speakBusy = false; processQueue(); };
+  synth.speak(utt);
+}
+
+function setSpeakingIndicator(active, text = '') {
+  const el = document.getElementById('speaking-indicator');
+  const tx = document.getElementById('speaking-text');
+  el.classList.toggle('active', active);
+  if (active && text) tx.textContent = text.length > 44 ? text.slice(0, 44) + '…' : text;
+  // Bloqueia visualmente o tabuleiro enquanto a voz fala
+  document.getElementById('board').classList.toggle('speaking', active);
+}
+
+function updateVoiceBadge() {
+  // Atualiza badge para mostrar qual motor TTS está a ser usado
+  const badge = document.getElementById('voice-badge');
+  if (!voiceEnabled) { badge.textContent = 'OFF'; badge.classList.add('off'); return; }
+  badge.classList.remove('off');
+  if (serverAvailable) {
+    badge.textContent = '🎙 Raquel Neural';
+    badge.style.fontSize = '.62rem';
+  } else {
+    badge.textContent = '⚠ Web Speech';
+    badge.style.fontSize = '.62rem';
+    badge.classList.add('off');   // destaca em vermelho: não é Neural
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ÁUDIO (Web Audio API – tons de feedback)
+// ═══════════════════════════════════════════════════════════════════
+let audioCtx = null;
+
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function tone(freq, dur, type = 'triangle', vol = 0.16) {
+  try {
+    const ctx = ac();
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = type; osc.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+
+function sfxX()       { tone(660, .16, 'triangle'); }
+function sfxO()       { tone(440, .16, 'triangle'); }
+function sfxWin()     { [523,659,784,1047].forEach((f,i) => setTimeout(()=>tone(f,.28,'triangle',.22), i*110)); }
+function sfxDraw()    { [380,340,300].forEach((f,i) => setTimeout(()=>tone(f,.2,'sawtooth',.1), i*90)); }
+function sfxFocus()   { tone(880, .06, 'sine', .06); }
+function sfxInvalid() { tone(200, .18, 'square', .1); }
+
+// ── Nome falado do jogador ────────────────────────────────────────
+function playerName(p) { return p === 'O' ? 'Círculo' : 'X'; }
+
+// ═══════════════════════════════════════════════════════════════════
+//  ESTADO DO JOGO
+// ═══════════════════════════════════════════════════════════════════
+let board = Array(9).fill(null);
+let current = 'X';
+let over = false;
+let scores = { X: 0, O: 0 };
+let mode = '2p';
+let focusIdx = 4;
+
+// ── Handicap inclusivo: CPU erra em N jogos aleatórios (1-5) ──────
+let cpuHandicapTotal = Math.floor(Math.random() * 5) + 1; // 1 a 5
+let cpuGamesPlayed   = 0;   // jogos disputados nesta sessão
+
+const WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+const POS = [
+  'canto superior esquerdo', 'centro superior', 'canto superior direito',
+  'centro esquerdo',         'centro',          'centro direito',
+  'canto inferior esquerdo', 'centro inferior', 'canto inferior direito'
+];
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONSTRUÇÃO DO TABULEIRO
+// ═══════════════════════════════════════════════════════════════════
+function buildBoard() {
+  const el = document.getElementById('board');
+  el.innerHTML = '';
+
+  for (let i = 0; i < 9; i++) {
+    const row = Math.floor(i / 3) + 1;
+    const col = (i % 3) + 1;
+
+    const btn = document.createElement('button');
+    btn.id        = `c${i}`;
+    btn.className = 'cell';
+    btn.setAttribute('role', 'gridcell');
+    btn.setAttribute('aria-rowindex', row);
+    btn.setAttribute('aria-colindex', col);
+    btn.setAttribute('aria-label', `${POS[i]}, vazia`);
+    btn.tabIndex  = i === focusIdx ? 0 : -1;
+    btn.dataset.i = i;
+
+    // Etiqueta visual de posição
+    const lbl = document.createElement('span');
+    lbl.className = 'cell-pos';
+    lbl.setAttribute('aria-hidden', 'true');
+    lbl.textContent = `L${row}C${col}`;
+    btn.appendChild(lbl);
+
+    // Dica de tecla numérica (numpad: 7=canto sup esq … 3=canto inf dir)
+    const numKey = (2 - (row - 1)) * 3 + (col - 1) + 1;
+    const numHint = document.createElement('span');
+    numHint.className = 'cell-num';
+    numHint.setAttribute('aria-hidden', 'true');
+    numHint.textContent = numKey;
+    btn.appendChild(numHint);
+
+    btn.addEventListener('click',   () => play(i));
+    btn.addEventListener('keydown', cellKey);
+    btn.addEventListener('focus',   () => {
+      focusIdx = i;
+      updateTabIdx();
+      sfxFocus();
+      // Anuncia estado ao focar (leitores de ecrã)
+      const st = board[i] ? `ocupada por ${board[i]}` : 'vazia';
+      document.getElementById('live-polite').textContent = '';
+      setTimeout(() => {
+        document.getElementById('live-polite').textContent = `${POS[i]}, ${st}`;
+      }, 40);
+    });
+
+    el.appendChild(btn);
+  }
+}
+
+function updateTabIdx() {
+  for (let i = 0; i < 9; i++) {
+    const c = document.getElementById(`c${i}`);
+    if (c) c.tabIndex = i === focusIdx ? 0 : -1;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  NAVEGAÇÃO POR TECLADO NO GRID
+// ═══════════════════════════════════════════════════════════════════
+function cellKey(e) {
+  const i = parseInt(e.currentTarget.dataset.i);
+  let next = i;
+
+  switch (e.key) {
+    case 'ArrowRight': if (i % 3 < 2)  next = i + 1; break;
+    case 'ArrowLeft':  if (i % 3 > 0)  next = i - 1; break;
+    case 'ArrowDown':  if (i < 6)       next = i + 3; break;
+    case 'ArrowUp':    if (i > 2)       next = i - 3; break;
+    default: return;
+  }
+  e.preventDefault();
+  focusIdx = next;
+  updateTabIdx();
+  document.getElementById(`c${next}`).focus();
+}
+
+// Mapa numpad → índice de célula (7=0, 8=1, 9=2, 4=3, 5=4, 6=5, 1=6, 2=7, 3=8)
+const NUMPAD_MAP = { '7':0,'8':1,'9':2,'4':3,'5':4,'6':5,'1':6,'2':7,'3':8 };
+
+// Atalhos globais
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea,select')) return;
+
+  // Tecla de fila numérica (não numpad): 1 = 2 jogadores, 2 = vs CPU
+  if (e.code === 'Digit1') { e.preventDefault(); setMode('2p');  return; }
+  if (e.code === 'Digit2') { e.preventDefault(); setMode('cpu'); return; }
+
+  // Numpad → jogar célula
+  const digit = e.code.startsWith('Numpad') ? e.code.replace('Numpad','') : null;
+  const key   = digit ?? null;   // apenas numpad; fila numérica já tratada acima
+  if (key !== null && key in NUMPAD_MAP) {
+    e.preventDefault();
+    const idx = NUMPAD_MAP[key];
+    focusIdx = idx;
+    updateTabIdx();
+    const cell = document.getElementById(`c${idx}`);
+    if (cell) { cell.focus(); play(idx); }
+    return;
+  }
+
+  if (e.target.matches('.cell')) return;
+  if (e.key === 'r' || e.key === 'R') newGame();
+  if (e.key === 'v' || e.key === 'V') toggleVoice();
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  LÓGICA DO JOGO
+// ═══════════════════════════════════════════════════════════════════
+function play(i) {
+  // Bloqueia jogada enquanto a voz ainda está a falar
+  if (speakBusy || speakQueue.length) return;
+
+  if (over || board[i]) {
+    sfxInvalid();
+    if (board[i]) speak(`Casa ocupada por ${playerName(board[i])}. Escolha outra.`, true);
+    return;
+  }
+
+  board[i] = current;
+  const cell = document.getElementById(`c${i}`);
+
+  // Limpa e reconstrói conteúdo
+  cell.innerHTML = '';
+  const lbl = document.createElement('span');
+  lbl.className = 'cell-pos';
+  lbl.setAttribute('aria-hidden', 'true');
+  lbl.textContent = `L${Math.floor(i/3)+1}C${(i%3)+1}`;
+  cell.appendChild(lbl);
+
+  const sym = document.createElement('span');
+  sym.setAttribute('aria-hidden', 'true');
+  sym.textContent = current === 'X' ? '✕' : '○';
+  cell.appendChild(sym);
+
+  cell.classList.add(current.toLowerCase(), 'taken', 'pop');
+  cell.setAttribute('aria-label', `${POS[i]}, ${current}`);
+  cell.setAttribute('disabled', '');
+
+  current === 'X' ? sfxX() : sfxO();
+  const numKey = (2 - Math.floor(i / 3)) * 3 + (i % 3) + 1;
+  speak(`${playerName(current)}, número ${numKey}.`, true);
+
+  const winner = checkWin();
+  if (winner)              { endGame(winner); return; }
+  if (board.every(c => c)) { endGame(null);   return; }
+
+  current = current === 'X' ? 'O' : 'X';
+  updateStatus();
+
+  if (mode === 'cpu' && current === 'O' && !over) {
+    if (speakBusy || speakQueue.length) {
+      pendingCpuMove = true;   // aguarda que a voz termine
+    } else {
+      setTimeout(cpuPlay, 350);
+    }
+  }
+}
+
+function checkWin() {
+  for (const [a, b, c] of WIN_LINES) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c])
+      return { player: board[a], line: [a, b, c] };
+  }
+  return null;
+}
+
+function endGame(result) {
+  over = true;
+  if (mode === 'cpu') cpuGamesPlayed++;
+  if (result) {
+    scores[result.player]++;
+    refreshScores();
+    result.line.forEach(i => document.getElementById(`c${i}`).classList.add('winner'));
+
+    const name = (mode === 'cpu' && result.player === 'O')
+      ? 'A CPU' : `O Jogador ${playerName(result.player)}`;
+    const msg  = `🎉 ${name} ganhou!`;
+    setStatus(msg, 'c-win', '');
+    currentStatusText = msg;
+    speak(`${name} ganhou! Parabéns! Prima Nova Partida para jogar de novo.`, true);
+    sfxWin();
+  } else {
+    setStatus('🤝 Empate!', 'c-win', '');
+    currentStatusText = 'Empate!';
+    speak('Empate! Ninguém ganhou. Prima Nova Partida para jogar de novo.', true);
+    sfxDraw();
+  }
+}
+
+function updateStatus() {
+  const isCpu  = mode === 'cpu' && current === 'O';
+  const name   = isCpu ? 'CPU' : `Jogador ${playerName(current)}`;
+  const cls    = current === 'X' ? 'c-x' : 'c-o';
+  const subTxt = current === 'X'
+    ? 'Símbolo: X  (tom agudo)'
+    : isCpu ? 'A CPU está a pensar…' : 'Símbolo: O  (tom grave)';
+
+  setStatus(`Vez de ${name}`, cls, subTxt);
+  currentStatusText = `Vez de ${name}`;
+
+  // Destaca carta do jogador ativo no placar
+  document.getElementById('sc-x').classList.toggle('turn', current === 'X');
+  document.getElementById('sc-o').classList.toggle('turn', current === 'O');
+}
+
+function setStatus(msg, cls, sub) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className   = cls;
+  document.getElementById('turn-sub').textContent = sub || '';
+}
+
+function refreshScores() {
+  const vx = document.getElementById('val-x');
+  const vo = document.getElementById('val-o');
+  vx.textContent = scores.X;
+  vo.textContent = scores.O;
+  vx.setAttribute('aria-label', `Pontuação X: ${scores.X}`);
+  vo.setAttribute('aria-label', `Pontuação O: ${scores.O}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CPU – Minimax com Alpha-Beta
+// ═══════════════════════════════════════════════════════════════════
+function cpuPlay() {
+  if (over) return;
+  // Re-verifica: se ainda a falar (race condition), reagenda
+  if (speakBusy || speakQueue.length) {
+    pendingCpuMove = true;
+    return;
+  }
+  setSpeakingIndicator(false);   // desbloqueia tabuleiro agora
+  // Handicap inclusivo: nos primeiros N jogos, CPU joga aleatoriamente
+  const idx = (cpuGamesPlayed < cpuHandicapTotal) ? randomMove() : bestMove();
+  play(idx);
+}
+
+function randomMove() {
+  const empty = board.map((v, i) => v === null ? i : -1).filter(i => i >= 0);
+  return empty[Math.floor(Math.random() * empty.length)];
+}
+
+function bestMove() {
+  let best = -Infinity, move = -1;
+  for (let i = 0; i < 9; i++) {
+    if (!board[i]) {
+      board[i] = 'O';
+      const s = minimax(false, -Infinity, Infinity);
+      board[i] = null;
+      if (s > best) { best = s; move = i; }
+    }
+  }
+  return move;
+}
+
+function minimax(isMax, alpha, beta) {
+  const w = checkWin();
+  if (w) return w.player === 'O' ? 10 : -10;
+  if (board.every(c => c)) return 0;
+
+  if (isMax) {
+    let v = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!board[i]) {
+        board[i] = 'O'; v = Math.max(v, minimax(false, alpha, beta));
+        board[i] = null; alpha = Math.max(alpha, v);
+        if (beta <= alpha) break;
+      }
+    }
+    return v;
+  } else {
+    let v = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!board[i]) {
+        board[i] = 'X'; v = Math.min(v, minimax(true, alpha, beta));
+        board[i] = null; beta = Math.min(beta, v);
+        if (beta <= alpha) break;
+      }
+    }
+    return v;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONTROLES PÚBLICOS
+// ═══════════════════════════════════════════════════════════════════
+function newGame() {
+  board   = Array(9).fill(null);
+  current = 'X';
+  over    = false;
+  focusIdx = 4;
+  buildBoard();
+  updateStatus();
+  const txt = mode === 'cpu'
+    ? 'Nova partida. Você joga com X. Use as setas para navegar e prima o botão Enter para jogar.'
+    : 'Nova partida. Jogador X começa. Use as setas para navegar e prima o botão Enter para jogar.';
+  speak(txt, true);
+  setTimeout(() => {
+    const c = document.getElementById(`c${focusIdx}`);
+    if (c) c.focus();
+  }, 120);
+}
+
+function resetAll() {
+  scores = { X: 0, O: 0 };
+  refreshScores();
+  newGame();
+  speak('Placar apagado. Nova partida.', true);
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-2p').classList.toggle('active', m === '2p');
+  document.getElementById('btn-cpu').classList.toggle('active', m === 'cpu');
+  document.getElementById('btn-2p').setAttribute('aria-pressed', m === '2p');
+  document.getElementById('btn-cpu').setAttribute('aria-pressed', m === 'cpu');
+  document.getElementById('label-o').textContent = m === 'cpu' ? 'CPU' : 'Jogador O';
+
+  const label = document.getElementById('sc-o').querySelector('.sc-label');
+  if (label) label.textContent = m === 'cpu' ? 'CPU' : 'Jogador O';
+
+  newGame();
+  speak(m === 'cpu'
+    ? 'Modo contra CPU ativado. Você é o Jogador X.'
+    : 'Modo dois jogadores ativado.', true);
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  if (!voiceEnabled) {
+    synth.cancel();
+    stopCurrentAudio();
+    speakQueue = []; speakBusy = false;
+    setSpeakingIndicator(false);
+  } else {
+    speak('Voz ativada.', true);
+  }
+  updateVoiceBadge();
+}
+
+function repeatStatus() {
+  speak(currentStatusText || 'Pronto a jogar.', true);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INICIALIZAÇÃO
+// ═══════════════════════════════════════════════════════════════════
+buildBoard();
+refreshScores();
+updateStatus();
+updateVoiceBadge();
+
+// Deteta servidor e carrega vozes
+setTimeout(async () => {
+  loadVoice();
+  await probeServer();
+  updateVoiceBadge();
+  speak(
+    ' Bem-vindo ao Jogo do Galo acessível. ' +
+    ' Prima 1 para jogar com um colega ou prima 2 para jogar com o computador.   ' +
+    ' Prima tecla Entrada para começar uma nova partida.',
+    false
+  );
+}, 400);
+</script>
+</body>
+</html>
