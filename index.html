@@ -901,7 +901,7 @@
       // ═══════════════════════════════════════════════════════════════════
       let board = Array(9).fill(null);
       let current = 'X';
-      let over = false;
+      let over = true;
       let scores = { X: 0, O: 0 };
       let mode = '2p';
       let modeSelected = false;
@@ -1292,8 +1292,7 @@
         updateVoiceBadge();
         speak(
           ' Bem-vindo ao Jogo do Galo. ' +
-          ' Prima 1 para jogar com um colega ou prima 2 para jogar com o computador.   ' +
-          false
+          ' Prima 1 para jogar com um colega ou prima 2 para jogar com o computador. '
         );
       }, 400);
     </script>
