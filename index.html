@@ -1011,15 +1011,15 @@
       document.addEventListener('keydown', e => {
         if (e.target.matches('input,textarea,select')) return;
 
-        // Tecla de fila numérica (não numpad): 1 = 2 jogadores, 2 = vs CPU
-        if (e.code === 'Digit1') { e.preventDefault(); setMode('2p');  return; }
-        if (e.code === 'Digit2') { e.preventDefault(); setMode('cpu'); return; }
+        // Tecla de fila numérica (não numpad): 1 = 2 jogadores, 2 = vs CPU — só no fim do jogo
+        if (e.code === 'Digit1' && over) { e.preventDefault(); setMode('2p');  return; }
+        if (e.code === 'Digit2' && over) { e.preventDefault(); setMode('cpu'); return; }
 
-        // Numpad → jogar célula (ou mudar modo se jogo inativo)
+        // Numpad → jogar célula (ou mudar modo apenas no fim do jogo)
         const digit = e.code.startsWith('Numpad') ? e.code.replace('Numpad','') : null;
         const key   = digit ?? null;   // apenas numpad; fila numérica já tratada acima
-        if (key === '1' && (over || !modeSelected)) { e.preventDefault(); setMode('2p');  return; }
-        if (key === '2' && (over || !modeSelected)) { e.preventDefault(); setMode('cpu'); return; }
+        if (key === '1' && over) { e.preventDefault(); setMode('2p');  return; }
+        if (key === '2' && over) { e.preventDefault(); setMode('cpu'); return; }
         if (key !== null && key in NUMPAD_MAP) {
           e.preventDefault();
           const idx = NUMPAD_MAP[key];
