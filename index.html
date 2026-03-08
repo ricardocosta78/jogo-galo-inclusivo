@@ -1027,7 +1027,7 @@ function setMode(m) {
 
   newGame();
   speak(m === 'cpu'
-    ? 'Modo contra CPU ativado. Você é o Jogador X.'
+    ? 'Modo contra CPU ativado. Você é o Jogador X. Selecione de 1 a 9 para jogar'
     : 'Modo dois jogadores ativado.', true);
 }
 
@@ -1062,7 +1062,7 @@ setTimeout(async () => {
   await probeServer();
   updateVoiceBadge();
   speak(
-    ' Bem-vindo ao Jogo do Galo acessível. ' +
+    ' Bem-vindo ao Jogo do Galo. ' +
     ' Prima 1 para jogar com um colega ou prima 2 para jogar com o computador.   ' +
     '  Selecione de 1 a 9 para jogar.',
     false
