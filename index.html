@@ -787,9 +787,12 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Digit1') { e.preventDefault(); setMode('2p');  return; }
   if (e.code === 'Digit2') { e.preventDefault(); setMode('cpu'); return; }
 
-  // Numpad → jogar célula
+  // Numpad → jogar célula (ou mudar modo se jogo inativo)
   const digit = e.code.startsWith('Numpad') ? e.code.replace('Numpad','') : null;
   const key   = digit ?? null;   // apenas numpad; fila numérica já tratada acima
+  const boardEmpty = board.every(c => !c);
+  if (key === '1' && (over || boardEmpty)) { e.preventDefault(); setMode('2p');  return; }
+  if (key === '2' && (over || boardEmpty)) { e.preventDefault(); setMode('cpu'); return; }
   if (key !== null && key in NUMPAD_MAP) {
     e.preventDefault();
     const idx = NUMPAD_MAP[key];
@@ -995,8 +998,8 @@ function newGame() {
   buildBoard();
   updateStatus();
   const txt = mode === 'cpu'
-    ? 'Nova partida. Você joga com X. Use as setas para navegar e prima o botão Enter para jogar.'
-    : 'Nova partida. Jogador X começa. Use as setas para navegar e prima o botão Enter para jogar.';
+    ? 'Nova partida. Você joga com X. Selecione de 1 a 9 para jogar.'
+    : 'Nova partida. Jogador X começa. Prima a tecla Entrada para jogar.';
   speak(txt, true);
   setTimeout(() => {
     const c = document.getElementById(`c${focusIdx}`);
