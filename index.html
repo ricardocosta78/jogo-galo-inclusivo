@@ -1226,8 +1226,8 @@
         buildBoard();
         updateStatus();
         const txt = mode === 'cpu'
-          ? 'Nova partida. Você joga com X. Selecione de 1 a 9 para jogar.'
-          : 'Nova partida. Jogador X começa. Prima a tecla Entrada para jogar.';
+          ? 'Nova partida. Você joga com X. ' + ' Selecione as teclas de 1 a 9 para jogar. '
+          : 'Nova partida. Jogador X começa. ' + ' Selecione as teclas de 1 a 9 para jogar. ';
         speak(txt, true);
         setTimeout(() => {
           const c = document.getElementById(`c${focusIdx}`);
